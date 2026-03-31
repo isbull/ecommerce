@@ -4,9 +4,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const redis = new Redis(process.env.UPSTASH_REDIS_URL, {
-  tls: {}, // Upstash requiere TLS
+  tls: {},
   retryStrategy(times) {
-    // Reintento exponencial con límite
     const delay = Math.min(times * 50, 2000);
     return delay;
   },
@@ -17,11 +16,11 @@ redis.on("connect", () => {
 });
 
 redis.on("error", (err) => {
-  console.error("❌ Error en Redis:", err);
+  console.error("Error en Redis:", err);
 });
 
 redis.on("reconnecting", () => {
-  console.log("♻️ Reintentando conexión a Redis...");
+  console.log("Reintentando conexión a Redis...");
 });
 
 // 🧪 TEST AUTOMÁTICO DE CONEXIÓN
@@ -29,7 +28,7 @@ redis.on("reconnecting", () => {
   try {
     await redis.set("test:redis", "OK");
     const value = await redis.get("test:redis");
-    console.log("🟢 Test Redis →", value); // Debe mostrar "OK"
+    console.log("🟢 Test Redis →", value);
   } catch (err) {
     console.error("❌ Error en test Redis:", err);
   }
