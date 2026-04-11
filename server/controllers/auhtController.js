@@ -1,7 +1,6 @@
 import User from "../models/userModel.js";
 import redis from "../lib/redis.js";
 import jwt from "jsonwebtoken";
-import { resolveModuleName } from "typescript";
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, {
@@ -60,17 +59,41 @@ export const signup = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
       },
       message: "User created successfully",
     });
   } catch (error) {
+    console.log("error in signup controller", error.message);
     res.status(500).json({ message: error.message });
   }
 };
 
 export const login = async (req, res) => {
-  res.send("Login route called");
+  try {
+    console.log("Corriendo el login");
+
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    console.log("Corriendo el login2");
+    if (user && (await user.comparePassword(password))) {
+      const { accessToken, refreshToken } = generateTokens(user._id);
+      console.log("User login");
+      await storeRefreshToken(user._id, refreshToken);
+      await setCookies(res, accessToken, refreshToken);
+
+      return res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      });
+    } else {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+  } catch (error) {
+    console.log("error in login controller", error.message);
+    res.status(500).json({ message: error.message });
+  }
 };
 
 export const logout = async (req, res) => {
@@ -87,6 +110,7 @@ export const logout = async (req, res) => {
     res.clearCookie("refreshToken");
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
+    console.log("Error in logout controller", error.message);
     res.status(500).json({ message: error.message });
   }
 };
