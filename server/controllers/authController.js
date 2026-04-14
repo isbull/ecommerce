@@ -1,6 +1,7 @@
 import User from "../models/userModel.js";
 import redis from "../lib/redis.js";
 import jwt from "jsonwebtoken";
+import validator from "validator";
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, {
@@ -10,6 +11,7 @@ const generateTokens = (userId) => {
   const refreshToken = jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: "7d",
   });
+
   return { accessToken, refreshToken };
 };
 
@@ -22,7 +24,7 @@ const storeRefreshToken = async (userId, refreshToken) => {
   );
 };
 
-const setCookies = async (res, accessToken, refreshToken) => {
+const setCookies = (res, accessToken, refreshToken) => {
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -40,15 +42,25 @@ const setCookies = async (res, accessToken, refreshToken) => {
 
 export const signup = async (req, res) => {
   const { email, password, name } = req.body;
+
   try {
+    // Validaciones básicas
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ message: "Password too short" });
+    }
+
     const userExists = await User.findOne({ email });
 
     if (userExists) {
       return res.status(400).json({ message: "User already exists" });
     }
+
     const user = await User.create({ name, email, password });
 
-    //authentication
     const { accessToken, refreshToken } = generateTokens(user._id);
     await storeRefreshToken(user._id, refreshToken);
 
@@ -59,6 +71,7 @@ export const signup = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
       message: "User created successfully",
     });
@@ -70,16 +83,14 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    console.log("Corriendo el login");
-
     const { email, password } = req.body;
+
     const user = await User.findOne({ email });
-    console.log("Corriendo el login2");
+
     if (user && (await user.comparePassword(password))) {
       const { accessToken, refreshToken } = generateTokens(user._id);
-      console.log("User login");
       await storeRefreshToken(user._id, refreshToken);
-      await setCookies(res, accessToken, refreshToken);
+      setCookies(res, accessToken, refreshToken);
 
       return res.json({
         _id: user._id,
@@ -87,11 +98,11 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role,
       });
-    } else {
-      return res.status(401).json({ message: "Invalid email or password" });
     }
+
+    return res.status(401).json({ message: "Invalid email or password" });
   } catch (error) {
-    console.log("error in login controller", error.message);
+    console.error("error in login controller", error.message);
     res.status(500).json({ message: error.message });
   }
 };
@@ -99,6 +110,7 @@ export const login = async (req, res) => {
 export const logout = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;
+
     if (refreshToken) {
       const decoded = jwt.verify(
         refreshToken,
@@ -106,8 +118,10 @@ export const logout = async (req, res) => {
       );
       await redis.del(`refresh_token:${decoded.userId}`);
     }
+
     res.clearCookie("accessToken");
     res.clearCookie("refreshToken");
+
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     console.log("Error in logout controller", error.message);

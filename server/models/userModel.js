@@ -5,7 +5,8 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      require: [true, "Name is required"],
+      required: [true, "Name is required"],
+      trim: true,
     },
     email: {
       type: String,
@@ -24,21 +25,22 @@ const userSchema = new mongoose.Schema(
       required: [true, "Password is required"],
       minlength: [6, "Password must be at least 6 characters long"],
     },
-    cartItems: {
-      quantity: {
-        type: Number,
-        default: 1,
+    cartItems: [
+      {
+        quantity: {
+          type: Number,
+          default: 1,
+        },
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
       },
-      product: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
-      },
-    },
+    ],
     role: {
       type: String,
       enum: ["customer", "admin"],
       default: "customer",
-      immutable: true,
     },
   },
   {
@@ -56,6 +58,7 @@ userSchema.pre("save", async function () {
 userSchema.methods.comparePassword = async function (password) {
   return bcrypt.compare(password, this.password);
 };
+
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
