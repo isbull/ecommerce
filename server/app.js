@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoute.js";
+import productRoutes from "./routes/productRoute.js";
 import { connectDB } from "./lib/db.js";
 import cookieParser from "cookie-parser";
 import { securityMiddlewares } from "./middlewares/security.js";
@@ -17,6 +18,7 @@ app.use(express.json({ limit: "10kb" }));
 app.use(securityMiddlewares);
 
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port http://localhost:${PORT}`);
