@@ -11,3 +11,6 @@ Se han agregado las siguientes dependencias
 "jsonwebtoken":
 "mongoose":
 "stripe": plataforma tecnológica que facilita los pagos online y en persona para negocios, actuando como un intermediario seguro entre los clientes y tu cuenta bancaria
+Helmet Protege tu API añadiendo cabeceras de seguridad HTTP. Evita ataques como: XSS, Clickjacking, Sniffing de MIME types
+express-rate-limit Limita las peticiones que puede hacer un usuario evitando fuerza bruta, bots, ataques DDoS
+mongo-sanitize evita que alguien envie operadores de Mongo (NoSQLI)
